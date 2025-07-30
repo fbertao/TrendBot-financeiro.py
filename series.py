@@ -5,15 +5,10 @@ df = pd.read_excel('asle.xlsx')
 print(df.head())
 print(df.dtypes)
 
-# Se 'close' estiver com datas, tente converter apenas valores que podem virar float:
-
-# Substitui vírgulas por pontos
 df['close'] = df['close'].astype(str).str.replace(',', '.', regex=False)
 
-# Tenta converter pra float, transforma erros em NaN
 df['close'] = pd.to_numeric(df['close'], errors='coerce')
 
-# Elimina linhas com NaN na coluna 'close' (valores não convertidos)
 df = df.dropna(subset=['close'])
 
 close = df['close'].tolist()
