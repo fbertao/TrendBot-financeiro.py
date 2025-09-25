@@ -9,6 +9,8 @@ import numpy as np
 
 dataset = pd.read_csv('resultado_atlo.csv')
 x = dataset.iloc[:, :-1].values
+# x = np.reshape(x, (x.shape[0],x.shape[1],1))
+print(x.shape)
 y = dataset.iloc[:, -1].values
 
 if y.dtype == 'O' or not np.issubdtype(y.dtype, np.integer):
@@ -34,14 +36,22 @@ model = tf.keras.models.Sequential([
     tf.keras.layers.BatchNormalization(),
     tf.keras.layers.Dense(16, activation='relu'),
     tf.keras.layers.BatchNormalization(),
-    tf.keras.layers.Dense(16, activation='relu'),
-    tf.keras.layers.BatchNormalization(),
-    tf.keras.layers.Dense(16, activation='relu'),
-    tf.keras.layers.BatchNormalization(),
-    tf.keras.layers.Dense(len(np.unique(y)), activation='softmax')
+    # tf.keras.layers.Dense(16, activation='relu'),
+    # tf.keras.layers.BatchNormalization(),
+    # tf.keras.layers.Dense(16, activation='relu'),
+    # tf.keras.layers.BatchNormalization(),
+    tf.keras.layers.Dense(2, activation='softmax')
 ])
 
-
+# model = tf.keras.models.Sequential([
+# 	layers.LSTM(20,return_sequences=True),
+# 	# layers.LSTM(40,return_sequences=True,go_backwards=True),
+# 	layers.Flatten(),
+# 	layers.BatchNormalization(),
+# 	layers.Dense(16),
+# 	layers.BatchNormalization(),
+# 	layers.Dense(2, activation='softmax')
+# 	])
 
 classes = np.unique(y_train)
 class_weights = compute_class_weight('balanced', classes=classes, y=y_train)
@@ -75,7 +85,7 @@ early_stop = tf.keras.callbacks.EarlyStopping(
 history = model.fit(
     x_train, y_train,
     validation_data=(x_val, y_val),
-    batch_size=128,
+    batch_size=8,
     epochs=200,
     verbose=1,
     class_weight=class_weight_dict,
