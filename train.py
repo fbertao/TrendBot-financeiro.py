@@ -7,9 +7,24 @@ from sklearn.preprocessing import LabelEncoder
 import pandas as pd
 import numpy as np
 
-dataset = pd.read_csv('resultado_atlo.csv')
+#converter tipo de dado
+def convert_to_numeric(value):
+    if isinstance(value, str):
+        value = value.replace(',', '.')
+        if value.count('.') > 1: 
+            value = value.replace('.', '')
+        try:
+            return float(value)
+        except ValueError:
+            return value 
+    return value
+
+dataset = pd.read_csv('base_maior.csv')
+for col in dataset.columns[:-1]:
+    dataset[col] = dataset[col].apply(convert_to_numeric)
+
 x = dataset.iloc[:, :-1].values
-# x = np.reshape(x, (x.shape[0],x.shape[1],1))
+x = np.reshape(x, (x.shape[0],x.shape[1],1))
 print(x.shape)
 y = dataset.iloc[:, -1].values
 
@@ -17,6 +32,7 @@ if y.dtype == 'O' or not np.issubdtype(y.dtype, np.integer):
     encoder = LabelEncoder()
     y = encoder.fit_transform(y)
 
+#divide em treino e validação
 x_train, x_val, y_train, y_val = train_test_split(
     x, y, test_size=0.2, random_state=42, stratify=y
 )
@@ -28,34 +44,42 @@ print("Validação:", x_val.shape, y_val.shape)
 print("Classes em treino:", np.unique(y_train))
 print("Classes em validação:", np.unique(y_val))
 
-model = tf.keras.models.Sequential([
-    tf.keras.layers.Input((x_train.shape[1],)),
-    tf.keras.layers.Dense(16, activation='relu'),
-    tf.keras.layers.BatchNormalization(),
-    tf.keras.layers.Dense(16, activation='relu'),
-    tf.keras.layers.BatchNormalization(),
-    tf.keras.layers.Dense(16, activation='relu'),
-    tf.keras.layers.BatchNormalization(),
-    # tf.keras.layers.Dense(16, activation='relu'),
-    # tf.keras.layers.BatchNormalization(),
-    # tf.keras.layers.Dense(16, activation='relu'),
-    # tf.keras.layers.BatchNormalization(),
-    tf.keras.layers.Dense(2, activation='softmax')
-])
+#dando erro do tipo argumento invalido (objeto) > transformar p float
+x_train = x_train.astype(np.float64)
+x_val = x_val.astype(np.float64)
+y_train = y_train.astype(np.float64)
+y_val = y_val.astype(np.float64)
 
-# model = tf.keras.models.Sequential([
-# 	layers.LSTM(20,return_sequences=True),
-# 	# layers.LSTM(40,return_sequences=True,go_backwards=True),
-# 	layers.Flatten(),
-# 	layers.BatchNormalization(),
-# 	layers.Dense(16),
-# 	layers.BatchNormalization(),
-# 	layers.Dense(2, activation='softmax')
-# 	])
+#modelo1 >
+#model = tf.keras.models.Sequential([
+    #tf.keras.layers.Input((x_train.shape[1],)),
+    #tf.keras.layers.Dense(16, activation='relu'),
+    #tf.keras.layers.BatchNormalization(),
+    #tf.keras.layers.Dense(16, activation='relu'),
+    #tf.keras.layers.BatchNormalization(),
+    #tf.keras.layers.Dense(16, activation='relu'),
+    #tf.keras.layers.BatchNormalization(),
+    # tf.keras.layers.Dense(16, activation='relu'),
+    # tf.keras.layers.BatchNormalization(),
+    # tf.keras.layers.Dense(16, activation='relu'),
+    # tf.keras.layers.BatchNormalization(),
+    #tf.keras.layers.Dense(2, activation='softmax')
+#])
+
+#modelo 2 (LSTM) >
+model = tf.keras.models.Sequential([
+	layers.LSTM(20,return_sequences=True),
+    layers.LSTM(40,return_sequences=True,go_backwards=True),
+ 	layers.Flatten(),
+ 	layers.BatchNormalization(),
+ 	layers.Dense(16),
+ 	layers.BatchNormalization(),
+ 	layers.Dense(2, activation='softmax')
+ 	])
 
 classes = np.unique(y_train)
 class_weights = compute_class_weight('balanced', classes=classes, y=y_train)
-class_weight_dict = dict(zip(classes, class_weights))  # mapeia classe → peso
+class_weight_dict = dict(zip(classes, class_weights)) 
 print("Pesos de classe:", class_weight_dict)
 
 
@@ -93,7 +117,7 @@ history = model.fit(
 )
 
 
-model.save('dnn_model_atlo.h5')
+model.save('dnn_model.h5')
 model.evaluate(x_val, y_val)
 
 acc = history.history['accuracy']
