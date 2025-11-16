@@ -7,6 +7,11 @@ from sklearn.preprocessing import LabelEncoder, RobustScaler
 from sklearn.preprocessing import StandardScaler
 import pandas as pd
 import numpy as np
+from sklearn.metrics import (
+    classification_report, confusion_matrix, ConfusionMatrixDisplay,
+    precision_score, recall_score, f1_score, roc_curve, roc_auc_score
+)
+
 
 # converter tipo de dado
 def convert_to_numeric(value):
@@ -18,6 +23,7 @@ def convert_to_numeric(value):
             return np.nan
     return value
 
+# ler base de dados
 ds = pd.read_csv('base_maior.csv')
 for col in ds.columns[:-1]:
     ds[col] = ds[col].apply(convert_to_numeric)
@@ -30,12 +36,19 @@ ds = ds.dropna().reset_index(drop=True)
 ds[colunas_num] = ds[colunas_num].clip(-100, 100)
 
 x = ds.iloc[:, :-1]. values
-#print(x.shape)
 y = ds.iloc[:, -1].values
 
 if y.dtype == 'O' or not np.issubdtype(y.dtype, np.integer):
     encoder = LabelEncoder()
     y = encoder.fit_transform(y)
+    classes = list(encoder.classes_)
+
+    if "Sim" in classes and classes.index("Sim") !=1:
+        y = np.where(y == 1,0,1)
+        print("'Sim' = 1 e 'Não' = 0")
+    else:
+        print("Subiu ja é classe positiva")
+
 
 # normalização z-score
 scaler = RobustScaler()
@@ -117,23 +130,94 @@ history = model.fit(
 #model.save('dnn_model_1.h5')
 #model.evaluate(x_val, y_val)
 
-acc = history.history['accuracy']
-val_acc = history.history['val_accuracy']
-loss = history.history['loss']
-val_loss = history.history['val_loss']
+#acc = history.history['accuracy']
+#val_acc = history.history['val_accuracy']
+#loss = history.history['loss']
+#val_loss = history.history['val_loss']
 
-epochs_range = range(len(acc))
+#epochs_range = range(len(acc))
 
-plt.figure(figsize=(12, 5))
-plt.subplot(1, 2, 1)
-plt.plot(epochs_range, acc, label='Treino')
-plt.plot(epochs_range, val_acc, label='Validação')
-plt.legend(loc='lower right')
-plt.title('Acurácia - Treino vs validação')
+#plt.figure(figsize=(12, 5))
+#plt.subplot(1, 2, 1)
+#plt.plot(epochs_range, acc, label='Treino')
+#plt.plot(epochs_range, val_acc, label='Validação')
+#plt.legend(loc='lower right')
+#plt.title('Acurácia - Treino vs validação')
 
-plt.subplot(1, 2, 2)
-plt.plot(epochs_range, loss, label='Treino')
-plt.plot(epochs_range, val_loss, label='Validação')
-plt.legend(loc='upper right')
-plt.title('Loss - Treino vs validação')
-plt.show()
+#plt.subplot(1, 2, 2)
+#plt.plot(epochs_range, loss, label='Treino')
+#plt.plot(epochs_range, val_loss, label='Validação')
+#plt.legend(loc='upper right')
+#plt.title('Loss - Treino vs validação')
+#plt.show()
+
+# --------------- métricas de avaliação do modelo --------------
+y_pred_prob = model.predict(x_val)
+y_pred = np.argmax(y_pred_prob, axis=1)
+
+# precision = precision_score(y_val, y_pred)
+# recall = recall_score(y_val, y_pred)
+# f1 = f1_score(y_val, y_pred)
+# accuracy = np.mean(y_val == y_pred)
+# auc = roc_auc_score(y_val, y_pred_prob[:, 1])
+
+# metrics_df = pd.DataFrame({
+#     'Métrica': ['Acurácia', 'Precisão', 'Recall (Sensibilidade)', 'F1-Score', 'AUC'],
+#     'Valor': [accuracy, precision, recall, f1, auc]
+# })
+# print("\nmétricas")
+# print(metrics_df.to_string(index=False, float_format='{:,.4f}'.format))
+
+
+# print("\nRelatório:")
+# print(classification_report(y_val, y_pred, target_names=["Não subiu", "Subiu"]))
+
+#matriz
+# cm = confusion_matrix(y_val, y_pred)
+# disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=["Não subiu", "Subiu"])
+# disp.plot(cmap='Blues', values_format='d')
+# plt.title("Matriz de Confusão - Validação")
+# plt.show()
+
+#curva roc
+# fpr, tpr, thresholds = roc_curve(y_val, y_pred_prob[:, 1])
+# plt.figure(figsize=(6, 5))
+# plt.plot(fpr, tpr, label=f'ROC (AUC = {auc:.3f})')
+# plt.plot([0, 1], [0, 1], 'k--', label='Aleatório')
+# plt.xlabel('Falsos Positivos')
+# plt.ylabel('Verdadeiros Positivos')
+# plt.title('Curva ROC - Validação')
+# plt.legend(loc='lower right')
+# plt.show()
+
+# ------------ simular treino ---------
+prob_sim = y_pred_prob[:,1]
+
+#testar thresholds
+limite = [0.5, 0.6, 0.7, 0.8, 0.9]
+resultados = []
+
+for i in limite:
+    pred_i = (prob_sim >= i).astype(int)
+    acertos = np.sum(pred_i == y_val)
+    total = len(y_val)
+    acc = acertos / total
+
+    operacoes = np.sum(pred_i)
+    ganho = np.sum((pred_i == 1) & (y_val == 1))
+    perder = np.sum((pred_i == 1) & (y_val == 0))
+    if operacoes > 0:
+        taxa_acerto = ganho / operacoes
+    else: 
+        taxa_acerto = np.nan
+
+    resultados.append({
+        "limite": i,
+        "Acurácia:": acc,
+        "Operações:": operacoes,
+        "Taxa de acerto:": taxa_acerto
+    })
+
+    df_resultados = pd.DataFrame(resultados)
+    print("\n SIMULAÇÃO")
+    print(df_resultados.to_string(index=False, float_format='{:,.2%}'.format))
