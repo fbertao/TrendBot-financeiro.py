@@ -1,6 +1,6 @@
 import duckdb
 
-#excluindo tickers já usados
+# aqui ja tinha usado alguns tickers, entao limpei a base para nao duplicar os dados
 tickers_excluir = [
     'asle', 'asln', 'asmb', 'asnd',
     'aso', 'aspa', 'aspau', 'asrt'
@@ -17,4 +17,4 @@ df_filtrado = duckdb.query(query).to_df()
 
 df_filtrado.to_csv("ativos_filtrados.csv", index=False)
 
-print("Linhas excluídas com sucesso. Novo arquivo salvo como 'ativos_filtrados.csv'.")
+print("ok")
